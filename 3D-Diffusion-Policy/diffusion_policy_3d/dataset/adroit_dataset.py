@@ -76,7 +76,7 @@ class AdroitDataset(BaseDataset):
 
         data = {
             'obs': {
-                'point_cloud': point_cloud, # T, 1024, 6
+                'point_cloud': point_cloud, # T, 512, 6
                 'agent_pos': agent_pos, # T, D_pos
             },
             'action': sample['action'].astype(np.float32) # T, D_action

@@ -109,7 +109,16 @@ class ExtendedTimeStepAdroit(NamedTuple):
     def __getitem__(self, attr):
         return getattr(self, attr)
 
-    
+"""
+这个MujocoPointcloudWrapperAdroit类主要在原始环境（env）的基础上增加了点云数据的生成、处理和整合到观察（observation）中，以增强环境的感知信息。
+
+`MujocoPointcloudWrapperAdroit`在`PointCloudGenerator`的基础上实现了以下功能：
+1. **点云裁剪**：根据环境特定的最小和最大边界（如果使用点云裁剪的话）来裁剪生成的点云，只保留那些落在指定边界内的点。
+2. **点云变换**：对生成的点云应用旋转、缩放和偏移变换，这些变换参数是根据环境配置预先设定的。
+3. **点云采样**：将生成的点云采样到固定数量的点。支持两种采样方法：均匀采样（uniform）和远thest point sampling (fps)。这确保了输出的点云具有统一的数量，便于后续处理。
+4. **整合到观察结果中**：将处理后的点云数据添加到环境返回的观察结果字典中，这样智能体就可以利用这些信息进行决策。
+5. **深度图获取**：同时获取与点云相关的深度图信息，并将其也整合到观察结果中。
+"""
 class MujocoPointcloudWrapperAdroit(gym.Wrapper):
     """
     fetch point cloud from mujoco and add it to obs
@@ -178,6 +187,14 @@ class MujocoPointcloudWrapperAdroit(gym.Wrapper):
         
         obs_dict['point_cloud'] = point_cloud
         obs_dict['depth'] = depth
+        
+        """
+        obs_dict = {
+            'image': obs_pixels,  # (3, 84, 84), [0,255], uint8
+            'agent_pos': obs_sensor  # (24,)
+        }
+        现在再加这两个
+        """
         return obs_dict, reward, done, info
 
     def reset(self):

@@ -208,6 +208,7 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
 
 def make_basic_env(env, cam_list=[], from_pixels=False, hybrid_state=None, test_image=False, channels_first=False,
                    num_repeats=1, num_frames=1):
+    """压根没用到这个函数"""
     e = GymEnv(env)
     env_kwargs = None
     if from_pixels:  # TODO might want to improve this part
@@ -222,7 +223,23 @@ def make_basic_env(env, cam_list=[], from_pixels=False, hybrid_state=None, test_
     # if not from pixels... then it's simpler
     return e, env_kwargs
 
+"""
+AdroitEnv类在BasicAdroitEnv基础上实现了以下功能：
 
+环境配置和初始化：根据传入的参数，如环境名称、相机列表、特征类型等，初始化环境。它处理了兼容性问题（例如，确保环境名称以'-v0'结尾），并根据不同的需求（如像素、ResNet特征）选择适当的环境封装。
+
+奖励缩放：为不同的环境提供了奖励缩放因子，这有助于训练过程中奖励的标准化，使算法在不同尺度的奖励下表现更稳定。
+
+观察空间和动作空间定义：定义了与Diffusion Policy代码库兼容的观察空间和动作空间。这包括像素观察、深度图、传感器读数以及可选的点云数据。
+
+重置和步进函数：扩展了基本的重置和步进功能，返回一个包含所有观察信息的字典，并处理了奖励缩放。
+
+环境状态设置和获取：提供了设置和获取环境状态的方法，对于调试或演示生成非常有用。
+
+渲染功能：实现了渲染方法以生成RGB图像数组，便于可视化。
+
+Mujoco模拟器访问：提供了一个接口来直接访问底层Mujoco模拟器。
+"""
 class AdroitEnv:
     metadata = {"render.modes": ["rgb_array"], "video.frames_per_second": 10}
 
@@ -255,6 +272,7 @@ class AdroitEnv:
 
         # env, _ = make_basic_env(env_name, cam_list=cam_list, from_pixels=from_pixels, hybrid_state=True,
         #     test_image=test_image, channels_first=True, num_repeats=num_repeats, num_frames=num_frames)
+        print("env_name:", env_name)
         env = GymEnv(env_name)
         if env_feature_type == 'state':
             raise NotImplementedError("state env not ready")
@@ -368,8 +386,8 @@ class AdroitEnv:
     def get_pixels_with_width_height(self, w, h):
         return self._env.get_pixels_with_width_height(w, h)
 
-    def step(self, action, force_step_type=None, debug=False):
-
+    def step(self, action, force_step_type=None, debug=False)->dict:
+        """干两件事：奖励缩放，返回值格式化"""
         obs_all, reward, done, env_info = self._env.step(action)
 
         obs_pixels, obs_sensor = obs_all

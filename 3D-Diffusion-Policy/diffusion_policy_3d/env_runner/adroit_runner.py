@@ -64,7 +64,6 @@ class AdroitRunner(BaseRunner):
 
         all_goal_achieved = []
         all_success_rates = []
-        
 
 
         for episode_idx in tqdm.tqdm(range(self.eval_episodes), desc=f"Eval in Adroit {self.task_name} Pointcloud Env",
@@ -97,7 +96,7 @@ class AdroitRunner(BaseRunner):
                 np_action_dict = dict_apply(action_dict,
                                             lambda x: x.detach().to('cpu').numpy())
 
-                action = np_action_dict['action'].squeeze(0)
+                action = np_action_dict['action'].squeeze(0) # n_action_steps, action_dim 
                 # step env
                 obs, reward, done, info = env.step(action)
                 # all_goal_achieved.append(info['goal_achieved']
@@ -107,8 +106,6 @@ class AdroitRunner(BaseRunner):
 
             all_success_rates.append(info['goal_achieved'])
             all_goal_achieved.append(num_goal_achieved)
-
-
         # log
         log_data = dict()
         

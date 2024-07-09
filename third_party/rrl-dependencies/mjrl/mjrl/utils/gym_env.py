@@ -21,6 +21,8 @@ class GymEnv(object):
         # get the correct env behavior
         if type(env) == str:
             env = gym.make(env)
+            # print("here")
+            # print(env.action_space, env.observation_space)
         elif isinstance(env, gym.Env):
             env = env
         elif callable(env):

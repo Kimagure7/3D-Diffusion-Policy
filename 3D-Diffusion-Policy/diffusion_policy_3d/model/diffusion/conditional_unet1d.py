@@ -148,13 +148,13 @@ class ConditionalResidualBlock1D(nn.Module):
 
 class ConditionalUnet1D(nn.Module):
     def __init__(self, 
-        input_dim,
+        input_dim, # action_dim
         local_cond_dim=None,
-        global_cond_dim=None,
-        diffusion_step_embed_dim=256,
-        down_dims=[256,512,1024],
-        kernel_size=3,
-        n_groups=8,
+        global_cond_dim=None, # obs_feature_dim 64 * n_obs_steps 2
+        diffusion_step_embed_dim=256, # 128
+        down_dims=[256,512,1024],# 512 1024 2048
+        kernel_size=3,# 5
+        n_groups=8,# 8
         condition_type='film',
         use_down_condition=True,
         use_mid_condition=True,
@@ -172,7 +172,7 @@ class ConditionalUnet1D(nn.Module):
 
         dsed = diffusion_step_embed_dim
         diffusion_step_encoder = nn.Sequential(
-            SinusoidalPosEmb(dsed),
+            SinusoidalPosEmb(dsed), # 正弦位置编码
             nn.Linear(dsed, dsed * 4),
             nn.Mish(),
             nn.Linear(dsed * 4, dsed),

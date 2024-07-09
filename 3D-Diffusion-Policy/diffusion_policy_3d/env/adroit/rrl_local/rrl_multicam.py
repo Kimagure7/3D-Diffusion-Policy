@@ -25,6 +25,24 @@ def make_encoder(encoder, encoder_type, device, is_eval=True) :
     encoder.to(device)
     return encoder
 
+"""
+`BasicAdroitEnv`在GymEnv的基础上实现了对Adroit环境的深度封装，主要服务于视觉强化学习任务，尤其是那些需要处理图像输入的任务。这一封装的主要内容和目的如下：
+
+1. **图像处理与编码**：通过集成`Encoder`类，它能够处理从环境中获取的原始图像数据，并将其转换为更紧凑、更易于机器学习模型处理的特征表示。这包括使用不同的图像编码器（如ResNet）和预处理变换。
+
+2. **多摄像头支持**：考虑到Adroit环境可能包含多个摄像头视角，`BasicAdroitEnv`设计了多摄像头的支持机制，可以同时从多个角度获取图像，并进行融合或分别处理。
+
+3. **状态融合**：通过参数`hybrid_state`控制是否将视觉信息与传感器信息（如关节位置等物理状态）融合，以形成更全面的状态表示。
+
+4. **堆叠帧**：为了捕捉时间连续性信息，环境提供了帧堆叠功能。这在强化学习中很常见，尤其是在基于像素的环境中，有助于模型理解动作的效果和物体运动的趋势。
+
+5. **自定义观测空间**：根据使用的编码器类型和输出维度调整观测空间的定义，确保与所选编码器兼容。
+
+6. **评估策略的功能**：提供了评估策略性能的方法（如计算平均回报、标准差等），这对于比较不同策略的效果非常有用。
+
+作者这样设计的主要目的是为了创建一个更通用、更灵活的环境接口，使得研究者可以专注于算法开发而非环境适配。通过封装复杂性于内部实现中，简化了外部调用接口，便于用户快速实验不同类型的强化学习算法在视觉任务上的表现。此外，在多模态信息融合方面提供支持也反映了当前强化学习领域的一个重要趋势：即如何有效利用多种类型的数据来提升决策智能体的表现。
+"""
+
 class BasicAdroitEnv(gym.Env): # , ABC
     def __init__(self, env, cameras, latent_dim=512, hybrid_state=True, channels_first=False, 
     height=84, width=84, test_image=False, num_repeats=1, num_frames=1, encoder_type=None, device=None):
@@ -173,6 +191,7 @@ class BasicAdroitEnv(gym.Env): # , ABC
         return stacked_pixels, sensor_info
 
     def step(self, action):
+        """动作重复，多帧堆叠，奖励累计"""
         reward_sum = 0.0
         discount_prod = 1.0 # TODO pen can terminate early 
         n_goal_achieved = 0

@@ -256,7 +256,7 @@ class TrainDP3Workspace:
                 # runner_log = env_runner.run(policy, dataset=dataset)
                 runner_log = env_runner.run(policy)
                 t4 = time.time()
-                # print(f"rollout time: {t4-t3:.3f}")
+                print(f"rollout time: {t4-t3:.3f}")
                 # log all
                 step_log.update(runner_log)
 

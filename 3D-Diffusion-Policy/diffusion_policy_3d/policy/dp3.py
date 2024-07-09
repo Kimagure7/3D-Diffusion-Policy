@@ -22,9 +22,9 @@ class DP3(BasePolicy):
     def __init__(self, 
             shape_meta: dict,
             noise_scheduler: DDPMScheduler,
-            horizon, 
-            n_action_steps, 
-            n_obs_steps,
+            horizon, # 4
+            n_action_steps, # 4
+            n_obs_steps,  #2
             num_inference_steps=None,
             obs_as_global_cond=True,
             diffusion_step_embed_dim=256,
@@ -61,15 +61,15 @@ class DP3(BasePolicy):
 
 
         obs_encoder = DP3Encoder(observation_space=obs_dict,
-                                                   img_crop_shape=crop_shape,
-                                                out_channel=encoder_output_dim,
+                                                   img_crop_shape=crop_shape, # 80， 80
+                                                out_channel=encoder_output_dim, # 64
                                                 pointcloud_encoder_cfg=pointcloud_encoder_cfg,
                                                 use_pc_color=use_pc_color,
                                                 pointnet_type=pointnet_type,
                                                 )
 
         # create diffusion model
-        obs_feature_dim = obs_encoder.output_shape()
+        obs_feature_dim = obs_encoder.output_shape() # 64
         input_dim = action_dim + obs_feature_dim
         global_cond_dim = None
         if obs_as_global_cond:
@@ -88,17 +88,17 @@ class DP3(BasePolicy):
 
 
         model = ConditionalUnet1D(
-            input_dim=input_dim,
+            input_dim=input_dim, # action_dim 
             local_cond_dim=None,
-            global_cond_dim=global_cond_dim,
-            diffusion_step_embed_dim=diffusion_step_embed_dim,
-            down_dims=down_dims,
-            kernel_size=kernel_size,
-            n_groups=n_groups,
-            condition_type=condition_type,
-            use_down_condition=use_down_condition,
-            use_mid_condition=use_mid_condition,
-            use_up_condition=use_up_condition,
+            global_cond_dim=global_cond_dim, # obs_feature_dim * n_obs_steps
+            diffusion_step_embed_dim=diffusion_step_embed_dim,# 128
+            down_dims=down_dims, # 512, 1024, 2048
+            kernel_size=kernel_size, # 5
+            n_groups=n_groups, # 8
+            condition_type=condition_type, # film
+            use_down_condition=use_down_condition, # t
+            use_mid_condition=use_mid_condition,  # t
+            use_up_condition=use_up_condition, # t
         )
 
         self.obs_encoder = obs_encoder
@@ -113,7 +113,7 @@ class DP3(BasePolicy):
             max_n_obs_steps=n_obs_steps,
             fix_obs_steps=True,
             action_visible=False
-        )
+        )# 实际上全是false
         
         self.normalizer = LinearNormalizer()
         self.horizon = horizon
@@ -153,7 +153,7 @@ class DP3(BasePolicy):
         scheduler.set_timesteps(self.num_inference_steps)
 
 
-        for t in scheduler.timesteps:
+        for t in scheduler.timesteps: #10步就能得到结果 ddpm帅的
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
 
@@ -180,6 +180,7 @@ class DP3(BasePolicy):
         result: must include "action" key
         """
         # normalize input
+        # obs_dict = batch['obs']
         nobs = self.normalizer.normalize(obs_dict)
         # this_n_point_cloud = nobs['imagin_robot'][..., :3] # only use coordinate
         if not self.use_pc_color:
@@ -231,10 +232,10 @@ class DP3(BasePolicy):
             cond_mask,
             local_cond=local_cond,
             global_cond=global_cond,
-            **self.kwargs)
+            **self.kwargs) # B,T,Da
         
         # unnormalize prediction
-        naction_pred = nsample[...,:Da]
+        naction_pred = nsample[...,:Da] # why?
         action_pred = self.normalizer['action'].unnormalize(naction_pred)
 
         # get action
@@ -259,8 +260,8 @@ class DP3(BasePolicy):
     def compute_loss(self, batch):
         # normalize input
 
-        nobs = self.normalizer.normalize(batch['obs'])
-        nactions = self.normalizer['action'].normalize(batch['action'])
+        nobs = self.normalizer.normalize(batch['obs']) # B, T, (512, 6)+(D_pos)
+        nactions = self.normalizer['action'].normalize(batch['action']) # B, T, D_action
 
         if not self.use_pc_color:
             nobs['point_cloud'] = nobs['point_cloud'][..., :3]
@@ -287,10 +288,10 @@ class DP3(BasePolicy):
                 global_cond = nobs_features.reshape(batch_size, self.n_obs_steps, -1)
             else:
                 # reshape back to B, Do
-                global_cond = nobs_features.reshape(batch_size, -1)
+                global_cond = nobs_features.reshape(batch_size, -1) # B，T*64
             # this_n_point_cloud = this_nobs['imagin_robot'].reshape(batch_size,-1, *this_nobs['imagin_robot'].shape[1:])
-            this_n_point_cloud = this_nobs['point_cloud'].reshape(batch_size,-1, *this_nobs['point_cloud'].shape[1:])
-            this_n_point_cloud = this_n_point_cloud[..., :3]
+            this_n_point_cloud = this_nobs['point_cloud'].reshape(batch_size,-1, *this_nobs['point_cloud'].shape[1:]) # 也是B，T恢复
+            this_n_point_cloud = this_n_point_cloud[..., :3] # 又一次取前三个？
         else:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, lambda x: x.reshape(-1, *x.shape[2:]))

@@ -172,9 +172,9 @@ class PointNetEncoderXYZ(nn.Module):
          
          
     def forward(self, x):
-        x = self.mlp(x)
-        x = torch.max(x, 1)[0]
-        x = self.final_projection(x)
+        x = self.mlp(x) # B*T,N,256
+        x = torch.max(x, 1)[0] # B*T,256 [0]只是为了去除max中的元素
+        x = self.final_projection(x) # B*T,64
         return x
     
     def save_gradient(self, module, grad_input, grad_output):
@@ -204,10 +204,10 @@ class PointNetEncoderXYZ(nn.Module):
 class DP3Encoder(nn.Module):
     def __init__(self, 
                  observation_space: Dict, 
-                 img_crop_shape=None,
-                 out_channel=256,
+                 img_crop_shape=None, # 80 80
+                 out_channel=256, # 64
                  state_mlp_size=(64, 64), state_mlp_activation_fn=nn.ReLU,
-                 pointcloud_encoder_cfg=None,
+                 pointcloud_encoder_cfg=None, # in3 out64
                  use_pc_color=False,
                  pointnet_type='pointnet',
                  ):
@@ -271,8 +271,8 @@ class DP3Encoder(nn.Module):
         # points: B * 3 * (N + sum(Ni))
         pn_feat = self.extractor(points)    # B * out_channel
             
-        state = observations[self.state_key]
-        state_feat = self.state_mlp(state)  # B * 64
+        state = observations[self.state_key] 
+        state_feat = self.state_mlp(state)  # B*T,64 should be
         final_feat = torch.cat([pn_feat, state_feat], dim=-1)
         return final_feat
 
